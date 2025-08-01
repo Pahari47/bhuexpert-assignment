@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import SearchForm from '../components/SearchForm/SearchForm'
 import PropertyGrid from '../components/PropertyGrid/PropertyGrid'
+import PropertyMap from '../components/Map/PropertyMap'
+import { useGoogleMaps } from '../hooks/useGoogleMaps'
 import type { SearchFilters } from '../types/property'
 
 interface Property {
@@ -22,6 +24,9 @@ const Home = () => {
   const [results, setResults] = useState<Property[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | undefined>()
+
+  const mapsLoaded = useGoogleMaps()
 
   const handleSearch = async (filters: SearchFilters) => {
     try {
@@ -46,6 +51,7 @@ const Home = () => {
       }
 
       setResults(data.results)
+      setSelectedId(undefined) // clear map selection
       setLoading(false)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
@@ -67,10 +73,19 @@ const Home = () => {
           <div className="mt-4 mb-2 text-gray-700 font-medium">
             🏡 {results.length} properties found
           </div>
+
           <PropertyGrid
             properties={results}
-            onShowAmenities={(id) => console.log('Show amenities for:', id)}
+            onShowAmenities={(id) => setSelectedId(id)}
           />
+
+          {mapsLoaded && (
+            <PropertyMap
+              properties={results}
+              selectedId={selectedId}
+              onSelect={(id) => setSelectedId(id)}
+            />
+          )}
         </>
       )}
 
