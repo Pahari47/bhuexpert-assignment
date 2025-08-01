@@ -6,8 +6,12 @@ interface AmenityListProps {
 
 const AmenityList: React.FC<AmenityListProps> = ({ amenities }) => {
   const hasAmenities = Object.keys(amenities).length > 0
+  console.log('AmenityList received amenities:', amenities)
 
-  if (!hasAmenities) return null
+  if (!hasAmenities) {
+    console.log('No amenities to display')
+    return <div className="mt-8 text-gray-500">No nearby amenities found</div>
+  }
 
   return (
     <div className="mt-8">
@@ -22,6 +26,11 @@ const AmenityList: React.FC<AmenityListProps> = ({ amenities }) => {
               <li key={place.placeId} className="border rounded p-3 shadow bg-white">
                 <h4 className="font-semibold text-gray-900">{place.name}</h4>
                 <p className="text-sm text-gray-700">{place.address}</p>
+                {place.distance && place.duration && (
+                  <p className="text-sm text-gray-600">
+                    📍 {place.distance} – {place.duration}
+                  </p>
+                )}
                 {place.rating && (
                   <p className="text-sm text-yellow-600">
                     ⭐ {place.rating} ({place.userRatingsTotal} reviews)

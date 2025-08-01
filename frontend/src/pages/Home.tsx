@@ -31,7 +31,12 @@ const Home = () => {
 
   // Set which amenities to load when a property is selected
   const amenityTypes = ['school', 'hospital', 'supermarket']
-  const { amenities, loading: amenitiesLoading } = useNearbyAmenities(selectedId, amenityTypes)
+  const { amenities, loading: amenitiesLoading, error: amenitiesError } = useNearbyAmenities(selectedId, amenityTypes)
+  
+  console.log('Home component - selectedId:', selectedId)
+  console.log('Home component - amenities:', amenities)
+  console.log('Home component - amenitiesLoading:', amenitiesLoading)
+  console.log('Home component - amenitiesError:', amenitiesError)
 
   const handleSearch = async (filters: SearchFilters) => {
     try {
@@ -45,6 +50,7 @@ const Home = () => {
         }
       })
 
+      console.log('Search params:', Object.fromEntries(params.entries())) // Debug log
       const res = await fetch(`http://localhost:3000/api/properties/search?${params}`)
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`)
@@ -54,6 +60,19 @@ const Home = () => {
       if (!data.results) {
         throw new Error('No results field in response')
       }
+
+      // Validate property data
+      data.results.forEach((property: Property) => {
+        console.log('Received property:', {
+          id: property._id,
+          title: property.title,
+          coordinates: property.coordinates
+        });
+        
+        if (!property.coordinates || typeof property.coordinates.lat !== 'number' || typeof property.coordinates.lng !== 'number') {
+          console.error('Invalid coordinates for property:', property);
+        }
+      });
 
       setResults(data.results)
       setSelectedId(undefined)

@@ -16,7 +16,9 @@ export const searchProperties = async (req: Request, res: Response) => {
 
     const query: any = {}
 
-    if (city) query['location.city'] = city
+    console.log('Received search parameters:', req.query)
+
+    if (city) query['location.city'] = { $regex: city, $options: 'i' }
     if (minPrice || maxPrice) {
       query.price = {}
       if (minPrice) query.price.$gte = Number(minPrice)
@@ -35,6 +37,9 @@ export const searchProperties = async (req: Request, res: Response) => {
       .limit(Number(limit))
 
     const total = await Property.countDocuments(query)
+
+    console.log('MongoDB Query:', JSON.stringify(query))
+    console.log('Found', results.length, 'properties')
 
     res.json({
       total,
