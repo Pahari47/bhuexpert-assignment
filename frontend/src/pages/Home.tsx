@@ -3,7 +3,9 @@ import SearchForm from '../components/SearchForm/SearchForm'
 import PropertyGrid from '../components/PropertyGrid/PropertyGrid'
 import PropertyMap from '../components/Map/PropertyMap'
 import { useGoogleMaps } from '../hooks/useGoogleMaps'
+import { useNearbyAmenities } from '../hooks/useNearbyAmenities'
 import type { SearchFilters } from '../types/property'
+import AmenityList from '../components/AmenityList/AmenityList'
 
 interface Property {
   _id: string
@@ -25,8 +27,11 @@ const Home = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | undefined>()
-
   const mapsLoaded = useGoogleMaps()
+
+  // Set which amenities to load when a property is selected
+  const amenityTypes = ['school', 'hospital', 'supermarket']
+  const { amenities, loading: amenitiesLoading } = useNearbyAmenities(selectedId, amenityTypes)
 
   const handleSearch = async (filters: SearchFilters) => {
     try {
@@ -51,7 +56,7 @@ const Home = () => {
       }
 
       setResults(data.results)
-      setSelectedId(undefined) // clear map selection
+      setSelectedId(undefined)
       setLoading(false)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
@@ -80,11 +85,15 @@ const Home = () => {
           />
 
           {mapsLoaded && (
-            <PropertyMap
-              properties={results}
-              selectedId={selectedId}
-              onSelect={(id) => setSelectedId(id)}
-            />
+            <>
+              <PropertyMap
+                properties={results}
+                selectedId={selectedId}
+                onSelect={(id) => setSelectedId(id)}
+                nearbyAmenities={amenities}
+              />
+              <AmenityList amenities={amenities} />
+            </>
           )}
         </>
       )}
