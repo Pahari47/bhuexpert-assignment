@@ -1,15 +1,32 @@
 import { useState } from 'react'
 import SearchForm from '../components/SearchForm/SearchForm'
+import PropertyGrid from '../components/PropertyGrid/PropertyGrid'
 import type { SearchFilters } from '../types/property'
+
+interface Property {
+  _id: string
+  title: string
+  price: number
+  location: { city: string; state: string }
+  propertyType: string
+  bedrooms: number
+  bathrooms: number
+  area: number
+  images: string[]
+  listedDate: string
+  coordinates: { lat: number; lng: number }
+}
 
 const Home = () => {
   const [filters, setFilters] = useState<SearchFilters>({})
-  const [results, setResults] = useState([])
+  const [results, setResults] = useState<Property[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSearch = async (filters: SearchFilters) => {
     try {
       setLoading(true)
+      setError(null)
       const params = new URLSearchParams()
 
       Object.entries(filters).forEach(([key, value]) => {
@@ -19,12 +36,23 @@ const Home = () => {
       })
 
       const res = await fetch(`http://localhost:3000/api/properties/search?${params}`)
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
+      }
+
       const data = await res.json()
+      if (!data.results) {
+        throw new Error('No results field in response')
+      }
+
       setResults(data.results)
       setLoading(false)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
       console.error('Search failed:', error)
+      setError(errorMessage)
       setLoading(false)
+      setResults([])
     }
   }
 
@@ -32,8 +60,24 @@ const Home = () => {
     <div className="max-w-6xl mx-auto p-4">
       <SearchForm onSearch={handleSearch} />
       {loading && <p className="mt-4 text-gray-500">Loading...</p>}
-      {!loading && results.length > 0 && (
-        <div className="mt-4">🏡 {results.length} properties found</div>
+      {error && <p className="mt-4 text-red-500">Error: {error}</p>}
+
+      {!loading && !error && results.length > 0 && (
+        <>
+          <div className="mt-4 mb-2 text-gray-700 font-medium">
+            🏡 {results.length} properties found
+          </div>
+          <PropertyGrid
+            properties={results}
+            onShowAmenities={(id) => console.log('Show amenities for:', id)}
+          />
+        </>
+      )}
+
+      {!loading && !error && results.length === 0 && (
+        <p className="mt-4 text-gray-500">
+          No properties found. Try adjusting your search criteria.
+        </p>
       )}
     </div>
   )
