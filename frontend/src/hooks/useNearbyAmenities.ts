@@ -46,9 +46,14 @@ export const useNearbyAmenities = (
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const lastFetchedId = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (!propertyId || types.length === 0) return
+    
+    // Prevent duplicate fetches for the same property
+    if (lastFetchedId.current === propertyId) return
+    lastFetchedId.current = propertyId
 
     const fetchAmenities = async () => {
       try {
@@ -64,10 +69,22 @@ export const useNearbyAmenities = (
         const url = `http://localhost:3000/api/properties/${propertyId}/nearby-amenities?types=${types.join(',')}&radius=3000&limit=5`
         console.log('Fetching amenities from:', url)
         const res = await fetch(url, { signal: abortControllerRef.current.signal })
-        if (!res.ok) throw new Error('Failed to fetch amenities')
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.message || `Failed to fetch amenities: ${res.status} ${res.statusText}`)
+        }
 
         const data: NearbyResponse = await res.json()
         console.log('Received amenities data:', data)
+        
+        if (!data.amenities || Object.keys(data.amenities).length === 0) {
+          console.warn('No amenities found in response:', data)
+        }
+        
+        if (!data.property?.coordinates) {
+          console.error('No property coordinates in response:', data)
+          throw new Error('Property coordinates not found in response')
+        }
         const originCoords = data.property.coordinates
         const origin = new google.maps.LatLng(originCoords.lat, originCoords.lng)
         const parsed: Record<string, Amenity[]> = {}

@@ -11,13 +11,14 @@ export const searchProperties = async (req: Request, res: Response) => {
       minBedrooms,
       sortBy = 'listedDate',
       page = 1,
-      limit = 10,
+      limit = 20, // Increased default limit
     } = req.query
 
     const query: any = {}
 
     console.log('Received search parameters:', req.query)
 
+    // Only apply filters if they are provided
     if (city) query['location.city'] = { $regex: city, $options: 'i' }
     if (minPrice || maxPrice) {
       query.price = {}
@@ -26,6 +27,9 @@ export const searchProperties = async (req: Request, res: Response) => {
     }
     if (propertyType) query.propertyType = propertyType
     if (minBedrooms) query.bedrooms = { $gte: Number(minBedrooms) }
+
+    // Log the constructed query
+    console.log('Constructed MongoDB query:', JSON.stringify(query))
 
     const sortOptions: any = {}
     if (sortBy === 'price') sortOptions.price = 1

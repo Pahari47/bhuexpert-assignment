@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import SearchForm from '../components/SearchForm/SearchForm'
 import PropertyGrid from '../components/PropertyGrid/PropertyGrid'
 import PropertyMap from '../components/Map/PropertyMap'
@@ -32,11 +32,36 @@ const Home = () => {
   // Set which amenities to load when a property is selected
   const amenityTypes = ['school', 'hospital', 'supermarket']
   const { amenities, loading: amenitiesLoading, error: amenitiesError } = useNearbyAmenities(selectedId, amenityTypes)
-  
-  console.log('Home component - selectedId:', selectedId)
-  console.log('Home component - amenities:', amenities)
-  console.log('Home component - amenitiesLoading:', amenitiesLoading)
-  console.log('Home component - amenitiesError:', amenitiesError)
+
+  // Load all properties when component mounts
+  useEffect(() => {
+    const loadAllProperties = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const res = await fetch('http://localhost:3000/api/properties/search')
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+
+        const data = await res.json()
+        if (!data.results) {
+          throw new Error('No results field in response')
+        }
+
+        setResults(data.results)
+        setLoading(false)
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+        console.error('Initial load failed:', error)
+        setError(errorMessage)
+        setLoading(false)
+      }
+    }
+
+    loadAllProperties()
+  }, []) // Empty dependency array means this runs once on mount
 
   const handleSearch = async (filters: SearchFilters) => {
     try {
