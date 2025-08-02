@@ -24,7 +24,10 @@ const run = async () => {
         bathrooms: 2,
         area: 1800,
         amenities: ['Gym', 'Pool', '24x7 Security'],
-        images: ['https://example.com/img1.jpg'],
+        images: [
+          'https://images.unsplash.com/photo-1606046604972-77cc76aee944?ixlib=rb-4.0.3',
+          'https://images.unsplash.com/photo-1594484208280-efa00f96fc21?ixlib=rb-4.0.3',
+        ],
         listedDate: new Date(),
         status: 'available',
         coordinates: { lat: 28.5672, lng: 77.2100 }, // Near AIIMS Delhi
@@ -39,7 +42,10 @@ const run = async () => {
         bathrooms: 2,
         area: 1600,
         amenities: ['Gym', 'Garden', 'Clubhouse'],
-        images: ['https://example.com/img2.jpg'],
+        images: [
+          'https://images.unsplash.com/photo-1552858725-a19e7fcd3ac4?ixlib=rb-4.0.3',
+          'https://images.unsplash.com/photo-1574362848149-11496d93a7c7?ixlib=rb-4.0.3',
+        ],
         listedDate: new Date(),
         status: 'available',
         coordinates: { lat: 12.9716, lng: 77.6441 }, // Indiranagar Bangalore
@@ -54,7 +60,10 @@ const run = async () => {
         bathrooms: 3,
         area: 2200,
         amenities: ['Swimming Pool', 'Kids Play Area', 'Tennis Court'],
-        images: ['https://example.com/img3.jpg'],
+        images: [
+          'https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3',
+          'https://images.unsplash.com/photo-1623298317883-6b70254edf31?ixlib=rb-4.0.3',
+        ],
         listedDate: new Date(),
         status: 'available',
         coordinates: { lat: 19.1136, lng: 72.9053 }, // Powai Mumbai
@@ -69,7 +78,10 @@ const run = async () => {
         bathrooms: 4,
         area: 3000,
         amenities: ['Private Garden', 'Swimming Pool', 'Home Theater'],
-        images: ['https://example.com/img4.jpg'],
+        images: [
+          'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3',
+          'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3',
+        ],
         listedDate: new Date(),
         status: 'available',
         coordinates: { lat: 17.4272, lng: 78.4098 }, // Jubilee Hills Hyderabad
@@ -84,7 +96,10 @@ const run = async () => {
         bathrooms: 2,
         area: 1400,
         amenities: ['Gym', 'Community Hall', 'Children\'s Play Area'],
-        images: ['https://example.com/img5.jpg'],
+        images: [
+          'https://images.unsplash.com/photo-1460317442991-0ec209397118?ixlib=rb-4.0.3',
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3',
+        ],
         listedDate: new Date(),
         status: 'available',
         coordinates: { lat: 22.5791, lng: 88.4320 }, // Salt Lake Kolkata
@@ -99,7 +114,10 @@ const run = async () => {
         bathrooms: 2,
         area: 1650,
         amenities: ['Gym', 'Jogging Track', 'Clubhouse'],
-        images: ['https://example.com/img6.jpg'],
+        images: [
+          'https://images.unsplash.com/photo-1515263487990-61b07816b324?ixlib=rb-4.0.3',
+          'https://images.unsplash.com/photo-1527030280862-64139fba04ca?ixlib=rb-4.0.3',
+        ],
         listedDate: new Date(),
         status: 'available',
         coordinates: { lat: 18.5589, lng: 73.8077 }, // Aundh Pune
