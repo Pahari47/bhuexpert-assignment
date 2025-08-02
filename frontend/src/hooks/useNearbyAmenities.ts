@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 export interface Amenity {
   name: string
@@ -23,21 +23,6 @@ interface NearbyResponse {
   timestamp: string
 }
 
-// Debounce utility function
-const debounce = <T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeoutId: NodeJS.Timeout | undefined
-
-  return (...args: Parameters<T>) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId)
-    }
-    timeoutId = setTimeout(() => func(...args), wait)
-  }
-}
-
 export const useNearbyAmenities = (
   propertyId: string | undefined,
   types: string[] = []
@@ -46,163 +31,135 @@ export const useNearbyAmenities = (
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
-  const lastFetchedId = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (!propertyId || types.length === 0) return
-    
-    // Prevent duplicate fetches for the same property
-    if (lastFetchedId.current === propertyId) return
-    lastFetchedId.current = propertyId
 
     const fetchAmenities = async () => {
       try {
-        // Cancel any previous requests
-        if (abortControllerRef.current) {
+        // Abort any previous request
+        if (
+          abortControllerRef.current &&
+          !abortControllerRef.current.signal.aborted
+        ) {
           abortControllerRef.current.abort()
         }
         abortControllerRef.current = new AbortController()
 
         setLoading(true)
         setError(null)
-        
+
         const url = `http://localhost:3000/api/properties/${propertyId}/nearby-amenities?types=${types.join(',')}&radius=3000&limit=5`
-        console.log('Fetching amenities from:', url)
+        console.log('Fetching amenities:', url)
         const res = await fetch(url, { signal: abortControllerRef.current.signal })
+
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}))
-          throw new Error(errorData.message || `Failed to fetch amenities: ${res.status} ${res.statusText}`)
+          throw new Error(errorData.message || `Failed to fetch amenities: ${res.status}`)
         }
 
         const data: NearbyResponse = await res.json()
-        console.log('Received amenities data:', data)
-        
-        if (!data.amenities || Object.keys(data.amenities).length === 0) {
-          console.warn('No amenities found in response:', data)
-        }
-        
-        if (!data.property?.coordinates) {
-          console.error('No property coordinates in response:', data)
-          throw new Error('Property coordinates not found in response')
-        }
+
         const originCoords = data.property.coordinates
         const origin = new google.maps.LatLng(originCoords.lat, originCoords.lng)
-        const parsed: Record<string, Amenity[]> = {}
 
+        const parsed: Record<string, Amenity[]> = {}
         const allDestinations: { type: string; amenity: Amenity }[] = []
 
         for (const type of Object.keys(data.amenities)) {
-          console.log(`Processing amenities of type: ${type}`, data.amenities[type])
-          parsed[type] = data.amenities[type].map((item: any) => {
-            const location = item.geometry?.location || item.coordinates || { lat: 0, lng: 0 }
+          if (!Array.isArray(data.amenities[type])) continue
 
-            const amenity: Amenity = {
-              name: item.name,
-              type,
-              address: item.vicinity || item.address || 'Unknown address',
-              distance: '',
-              duration: '',
-              placeId: item.place_id || '',  // Ensure placeId is never undefined
-              rating: item.rating,
-              userRatingsTotal: item.user_ratings_total,
-              location,
-            }
+          parsed[type] = data.amenities[type]
+            .map((item: any) => {
+              const location = item.geometry?.location || item.coordinates
+              const lat =
+                typeof location?.lat === 'function' ? location.lat() : location?.lat
+              const lng =
+                typeof location?.lng === 'function' ? location.lng() : location?.lng
 
-            allDestinations.push({ type, amenity })
-            return amenity
-          })
+              if (typeof lat !== 'number' || typeof lng !== 'number') return null
+
+              const amenity: Amenity = {
+                name: item.name,
+                type,
+                address: item.vicinity || item.formatted_address || 'Unknown address',
+                distance: '',
+                duration: '',
+                placeId: item.place_id || '',
+                rating: item.rating,
+                userRatingsTotal: item.user_ratings_total,
+                location: { lat, lng }
+              }
+
+              allDestinations.push({ type, amenity })
+              return amenity
+            })
+            .filter((a): a is Amenity => !!a)
         }
-        
-        console.log('Processed amenities:', parsed)
 
-        // Calculate distances in batches of 25 (Google Maps API limit)
-        const batchSize = 25
         const service = new google.maps.DistanceMatrixService()
+        const batchSize = 25
 
-        // Process destinations in batches
         for (let i = 0; i < allDestinations.length; i += batchSize) {
-          const batchDestinations = allDestinations.slice(i, i + batchSize)
-          const destinations = batchDestinations.map(({ amenity }) =>
+          const batch = allDestinations.slice(i, i + batchSize)
+          const destinations = batch.map(({ amenity }) =>
             new google.maps.LatLng(amenity.location.lat, amenity.location.lng)
           )
 
           try {
-            const result = await new Promise<google.maps.DistanceMatrixResponse>((resolve, reject) => {
-              service.getDistanceMatrix(
-                {
-                  origins: [origin],
-                  destinations,
-                  travelMode: google.maps.TravelMode.DRIVING,
-                  unitSystem: google.maps.UnitSystem.METRIC,
-                },
-                (response, status) => {
-                  if (status === 'OK' && response) {
-                    resolve(response)
-                  } else {
-                    reject(new Error(`Distance Matrix error: ${status}`))
+            const result = await new Promise<google.maps.DistanceMatrixResponse>(
+              (resolve, reject) => {
+                service.getDistanceMatrix(
+                  {
+                    origins: [origin],
+                    destinations,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                    unitSystem: google.maps.UnitSystem.METRIC
+                  },
+                  (response, status) => {
+                    if (status === 'OK' && response) {
+                      resolve(response)
+                    } else {
+                      reject(new Error(`Distance Matrix error: ${status}`))
+                    }
                   }
-                }
-              )
-            })
+                )
+              }
+            )
 
             if (result.rows?.[0]?.elements) {
               result.rows[0].elements.forEach((element, index) => {
-                const { amenity } = batchDestinations[index]
+                const { amenity } = batch[index]
                 if (element.status === 'OK') {
                   amenity.distance = element.distance?.text || ''
                   amenity.duration = element.duration?.text || ''
                 }
               })
             }
-          } catch (error) {
-            console.error('Error calculating distances:', error)
-          }
-        }
-
-        // Get additional place details for ratings
-        const placesService = new google.maps.places.PlacesService(document.createElement('div'));
-        
-        for (const { amenity } of allDestinations) {
-          try {
-            await new Promise((resolve, reject) => {
-              placesService.getDetails(
-                {
-                  placeId: amenity.placeId,
-                  fields: ['rating', 'user_ratings_total']
-                },
-                (result, status) => {
-                  if (status === 'OK' && result) {
-                    amenity.rating = result.rating;
-                    amenity.userRatingsTotal = result.user_ratings_total;
-                    resolve(result);
-                  } else {
-                    reject(new Error(`Place Details error: ${status}`));
-                  }
-                }
-              );
-            });
-          } catch (error) {
-            console.error('Error fetching place details:', error);
+          } catch (err) {
+            console.error('DistanceMatrix API error:', err)
           }
         }
 
         setAmenities(parsed)
         setLoading(false)
       } catch (err) {
+        if ((err as Error)?.name === 'AbortError') return
+        console.error('Amenity fetch error:', err)
         setError(err instanceof Error ? err.message : 'Unknown error')
         setLoading(false)
+        setAmenities({})
       }
     }
 
-    // Debounced fetch
-    const debouncedFetch = setTimeout(() => {
-      fetchAmenities()
-    }, 300) // 300ms delay
+    const timeout = setTimeout(fetchAmenities, 300)
 
-    // Cleanup function
     return () => {
-      clearTimeout(debouncedFetch)
-      if (abortControllerRef.current) {
+      clearTimeout(timeout)
+      if (
+        abortControllerRef.current &&
+        !abortControllerRef.current.signal.aborted
+      ) {
         abortControllerRef.current.abort()
       }
     }

@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import SearchForm from '../components/SearchForm/SearchForm'
 import PropertyGrid from '../components/PropertyGrid/PropertyGrid'
 import PropertyMap from '../components/Map/PropertyMap'
+import AmenityList from '../components/AmenityList/AmenityList'
 import { useGoogleMaps } from '../hooks/useGoogleMaps'
 import { useNearbyAmenities } from '../hooks/useNearbyAmenities'
 import type { SearchFilters } from '../types/property'
-import AmenityList from '../components/AmenityList/AmenityList'
 
 interface Property {
   _id: string
@@ -27,19 +27,18 @@ const Home = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | undefined>()
-  const mapsLoaded = useGoogleMaps()
 
-  // Set which amenities to load when a property is selected
+  const mapsLoaded = useGoogleMaps()
   const amenityTypes = ['school', 'hospital', 'supermarket']
   const { amenities, loading: amenitiesLoading, error: amenitiesError } = useNearbyAmenities(selectedId, amenityTypes)
 
-  // Load all properties when component mounts
+  // Load all properties on mount
   useEffect(() => {
     const loadAllProperties = async () => {
       try {
         setLoading(true)
         setError(null)
-        
+
         const res = await fetch('http://localhost:3000/api/properties/search')
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`)
@@ -51,31 +50,32 @@ const Home = () => {
         }
 
         setResults(data.results)
-        setLoading(false)
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
-        console.error('Initial load failed:', error)
+        console.error('Initial load failed:', errorMessage)
         setError(errorMessage)
+      } finally {
         setLoading(false)
       }
     }
 
     loadAllProperties()
-  }, []) // Empty dependency array means this runs once on mount
+  }, [])
 
   const handleSearch = async (filters: SearchFilters) => {
     try {
       setLoading(true)
       setError(null)
-      const params = new URLSearchParams()
 
+      const params = new URLSearchParams()
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== '') {
           params.append(key, String(value))
         }
       })
 
-      console.log('Search params:', Object.fromEntries(params.entries())) // Debug log
+      console.log('Search params:', Object.fromEntries(params.entries()))
+
       const res = await fetch(`http://localhost:3000/api/properties/search?${params}`)
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`)
@@ -86,34 +86,32 @@ const Home = () => {
         throw new Error('No results field in response')
       }
 
-      // Validate property data
       data.results.forEach((property: Property) => {
-        console.log('Received property:', {
-          id: property._id,
-          title: property.title,
-          coordinates: property.coordinates
-        });
-        
-        if (!property.coordinates || typeof property.coordinates.lat !== 'number' || typeof property.coordinates.lng !== 'number') {
-          console.error('Invalid coordinates for property:', property);
+        if (
+          !property.coordinates ||
+          typeof property.coordinates.lat !== 'number' ||
+          typeof property.coordinates.lng !== 'number'
+        ) {
+          console.error('Invalid coordinates for property:', property)
         }
-      });
+      })
 
       setResults(data.results)
-      setSelectedId(undefined)
-      setLoading(false)
+      setSelectedId(undefined) // Reset selected property
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
-      console.error('Search failed:', error)
+      console.error('Search failed:', errorMessage)
       setError(errorMessage)
-      setLoading(false)
       setResults([])
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <div className="max-w-6xl mx-auto p-4">
       <SearchForm onSearch={handleSearch} />
+
       {loading && <p className="mt-4 text-gray-500">Loading...</p>}
       {error && <p className="mt-4 text-red-500">Error: {error}</p>}
 
@@ -125,7 +123,11 @@ const Home = () => {
 
           <PropertyGrid
             properties={results}
-            onShowAmenities={(id) => setSelectedId(id)}
+            onShowAmenities={(id) => {
+              if (selectedId !== id) {
+                setSelectedId(id)
+              }
+            }}
           />
 
           {mapsLoaded && (
@@ -133,7 +135,11 @@ const Home = () => {
               <PropertyMap
                 properties={results}
                 selectedId={selectedId}
-                onSelect={(id) => setSelectedId(id)}
+                onSelect={(id) => {
+                  if (selectedId !== id) {
+                    setSelectedId(id)
+                  }
+                }}
                 nearbyAmenities={amenities}
               />
               <AmenityList amenities={amenities} />
