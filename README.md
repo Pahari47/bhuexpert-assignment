@@ -57,12 +57,13 @@ Backend (.env):
 ```
 MONGO_URI=your_mongodb_connection_string
 PORT=3000
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
 Frontend (.env):
 ```
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-VITE_API_BASE_URL=http://localhost:3000
+VITE_GOOGLE_MAPS_VERSION=weekly
 ```
 
 ### Running the Application
